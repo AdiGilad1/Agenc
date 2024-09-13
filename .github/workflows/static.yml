@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הצפנת קבצים - AGenc</title>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            direction: ltr; /* כיווניות של טקסט משמאל לימין */
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+            display: none;
+        }
+
+        .container.active {
+            display: block;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center; /* ממרכז את הכותרת */
+        }
+
+        .header {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-align: center;
+        }
+
+        form {
+            text-align: left; /* טקסט בשדות הקלט בכיוון שמאל לימין */
+        }
+
+        input[type="file"],
+        input[type="text"],
+        button {
+            margin-bottom: 15px;
+            width: calc(100% - 22px); /* רוחב כדי להתאים לסגנון */
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            display: block;
+        }
+
+        input[type="text"] {
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #downloadLink {
+            display: block;
+            margin-top: 20px;
+            text-decoration: none;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        #downloadLink:hover {
+            background-color: #218838;
+        }
+
+        .navigation-button {
+            margin-top: 20px;
+            background-color: #6c757d;
+        }
+
+        .navigation-button:hover {
+            background-color: #5a6268;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">AGenc</div>
+
+    <div id="encryptContainer" class="container active">
+        <h1>הצפנת קבצים</h1>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" required>
+            <input type="text" id="secretCode" placeholder="הכנס קוד סודי" required>
+            <button type="button" onclick="encryptFile()">הצפן קובץ</button>
+        </form>
+        <button class="navigation-button" onclick="showDecrypt()">עבור לביטול הצפנה</button>
+    </div>
+
+    <div id="decryptContainer" class="container">
+        <h1>ביטול הצפנה</h1>
+        <form id="decryptForm">
+            <input type="file" id="encryptedFile" required>
+            <input type="text" id="decryptCode" placeholder="הכנס קוד סודי" required>
+            <button type="button" onclick="decryptFile()">פענח קובץ</button>
+        </form>
+        <a id="downloadLink" style="display: none;">הורד את הקובץ המפוענח</a>
+        <button class="navigation-button" onclick="showEncrypt()">עבור להפקת קובץ</button>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 עדי גלעד - AGenc</p>
+    </div>
+
+    <script>
+        let encryptionCode = '';
+
+        function showEncrypt() {
+            document.getElementById('encryptContainer').classList.add('active');
+            document.getElementById('decryptContainer').classList.remove('active');
+        }
+
+        function showDecrypt() {
+            document.getElementById('encryptContainer').classList.remove('active');
+            document.getElementById('decryptContainer').classList.add('active');
+        }
+
+        function encryptFile() {
+            const fileInput = document.getElementById('fileInput');
+            const secretCode = document.getElementById('secretCode').value;
+            if (fileInput.files.length === 0 || !secretCode) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+
+            encryptionCode = secretCode;
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function() {
+                const wordArray = CryptoJS.lib.WordArray.create(reader.result);
+                const encrypted = CryptoJS.AES.encrypt(wordArray, secretCode).toString();
+                const blob = new Blob([encrypted], { type: file.type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'encrypted_' + file.name;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function decryptFile() {
+            const fileInput = document.getElementById('encryptedFile');
+            const decryptCode = document.getElementById('decryptCode').value;
+            if (fileInput.files.length === 0 || !decryptCode) {
+                alert('אנא מלא את כל השדות.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function() {
+                try {
+                    const encryptedContent = reader.result;
+                    const decrypted = CryptoJS.AES.decrypt(encryptedContent, decryptCode);
+                    const typedArray = decrypted.words.map(word => {
+                        return (word >>> 24) & 0xFF;
+                    });
+                    const blob = new Blob([new Uint8Array(typedArray)], { type: file.type });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.getElementById('downloadLink');
+                    a.href = url;
+                    a.download = 'decrypted_' + file.name;
+                    a.style.display = 'block';
+                } catch (e) {
+                    alert('הקוד הסודי שגוי או הקובץ פגום.');
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
